@@ -2,12 +2,9 @@
 #include <Servo.h>
 Servo Rotate;
 int degree;
-int taken;
-//s
 //--------------Ultrasonic-------------
 int Ear = 7; //Echo or Echo Pin
 int Shout = 8;   //Trig or Trigger pin
-long duration; //float vs long = float write 3.0320143113431313112341 while long write 3.0201eUF 
 float distance;
 float length;
 float read = 0;
@@ -25,7 +22,7 @@ int in4 = 5;
 bool signalON = true;
 bool signalOFF = false;
 
-
+//===============================================================================================//
 void setup() {
   // put your setup code here, to run once:
   pinMode(Shout, OUTPUT);
@@ -40,23 +37,24 @@ void setup() {
   pinMode(in2, OUTPUT); //DIRECTION B MOTOR A
   pinMode(in3, OUTPUT); //DIRECTION C MOTOR B 
   pinMode(in4, OUTPUT); //DIRECTION C MOTOR B
+  
 }
-//s
-int MotorHighLow(int ENABLE, int DISABLE){
-  digitalWrite( ENABLE, HIGH);
-  digitalWrite( DISABLE, LOW);
+
+//------MOTOR DIRECTION CONTROLLER------//
+int MotorHighLow(int ENABLE, int DISABLE, int ENABLE2, int DISABLE2){
+  digitalWrite( ENABLE,  HIGH);
+  digitalWrite( DISABLE,  LOW);
+  digitalWrite( ENABLE2, HIGH);
+  digitalWrite( DISABLE2, LOW);
 }
-//
-bool Motor(bool signal){
+//------MOTOR ENGINE ON AND OFF--------//
+bool Motor(bool signal){ //Engine ON
   if (signal==true){
-    //set engine speed
-    analogWrite(enA, 75);
-    analogWrite(enB, 75);
-  }else if(!signal){
-    //turn off engine
+    analogWrite(enA, 70);
+    analogWrite(enB, 70);
+  }else if(!signal){ //Engine OFF
     analogWrite(enA, 0);
     analogWrite(enB, 0);
-    //turnoff all signals
     digitalWrite(in1, LOW);
     digitalWrite(in2, LOW);
     digitalWrite(in3, LOW);
@@ -65,7 +63,7 @@ bool Motor(bool signal){
   };
 }
 
-
+//------ULTRASONIC READING---------
 int Ultrasonic(){
   digitalWrite(Shout, LOW);
   delayMicroseconds(2);
@@ -77,70 +75,47 @@ int Ultrasonic(){
   return (distance = (pulseIn(Ear, HIGH)) * 0.034/2); //since the sounds travel 2x(forward and backward) after bouncing, the distance/duration is technically read as double. need to dvide by 2.
 };
 
+//---------SERVO AND ULTRASONIC SYNCRHONIZATION----------//
 int looping(){
   Rotate.write(0);
   delay(1000);
   for(int i=0; i<= 180; i++){
     Rotate.write(i);
     newread = Ultrasonic();
-    Serial.print("Reading -------- ");
-    Serial.println(newread);
-    Serial.print("Directions: ");
-    Serial.println(i);
     if (read < newread){
       read = newread;
       direction = i;
     }
-  delay(2);
+  delay(10);
   }   
-    Serial.println("");
-  Serial.print(direction);
-  Serial.print(" Servo mark // ");
-  Serial.print(read);
-  Serial.println(" cm");
   delay(1000);
-  return read;
+  return direction;
 }
 
+//---------------------LOOP------------------------------------//
 void loop() {
   length = Ultrasonic();
-
-  Serial.print(length);
-  Serial.println( " cm");
-  if (length < 7){
+  if (length < 15){
     Motor(signalOFF); //STOP THE ENGINE
-    delay(1000);
-    Serial.println("SENSOR READING");
-    //ROTATE SERVO
-    length = looping();
-    Serial.println("Rotating Back the Servo to 90");    
-    Rotate.write(90);
+    direction = looping(); //Rotate SERVO TO GET DATA IN SURROUNDING  
+    Rotate.write(90); //ROTATING SERVO BACK TO CENTER/90 degree
     //FIX MOBOT DIRECTION
+    delay(1000);
     if (direction < 90){ //0-89 - RIGHT
-      for (int i=0; i < direction; i++ ){
-        MotorHighLow(in3, in4);
-        MotorHighLow(in1, in2);
-        Motor(signalON);
-        Serial.print("-");
-        delay(2);
-      }
-    }else{               //90-180 - LEFT
-      for (int i=0; i < (direction-90); i++ ){
-        MotorHighLow(in2, in1);
-        MotorHighLow(in4, in3);
-        Motor(signalON);
-        Serial.print("/");
-        delay(2);
-      }   
+        MotorHighLow(in3, in4, in1, in2); //FIX MOBOT WHEEL FOR ROTATION
+        direction = 90 - direction;        
+    }else{               //90-180 - LEFT 
+        MotorHighLow(in2, in1, in4, in3 );  //FIX MOBOT WHEEL FOR ROTATION
+        direction = 180 - direction;
+    }
+    for (float i=0.00; i<(direction);i=i+0.1){
+      Motor(signalON); //ROTATE THE MOBOT
+      delay(2);
     }
     Motor(signalOFF);
   }
-  Serial.print("");
-  Serial.println("Moving");
   //FORWARD
-  MotorHighLow(in1, in2); //MOTOR A FORWARD
-  MotorHighLow(in4, in3); //MOTOR B REVERSE
+  MotorHighLow(in1, in2, in4, in3); //MOTOR A FORWARD
   Motor(signalON);        //Engine ON
   delay(300);
- 
 }
