@@ -1,3 +1,10 @@
+///////////////////////////////////////////////////////////////////////////////////////////////
+////////////                Keanu P. Berches - Mobot                       ////////////////////
+////////////              Arduino Uno, Sg90, Ultrasonic                     ///////////////////
+////////////github: https://github.com/Keanu-Type/Arduino-Mobot-Version-one ///////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
+
+//Motor( Speed, Duration); //change speed value from 0-250 and Duration(Delay) on how long it is on or off. if you want to turn off the Motor, default value is 0.
 //------------- Servo -----------------
 #include <Servo.h>
 Servo Rotate;
@@ -20,9 +27,11 @@ int Back2 = 6;  //int3
 
 //===============================================================================================//
 void setup() {
+  //Ultrasonic and Servo;
   pinMode(Shout, OUTPUT);
   pinMode(Ear, INPUT);
   Rotate.attach(2);
+  Rotate.write(90);
   //Set all Motors 
   pinMode(enA, OUTPUT); //POWER
   pinMode(enB, OUTPUT); //POWER
@@ -33,27 +42,19 @@ void setup() {
 }
 
 //------MOTOR DIRECTION CONTROLLER------//
-int MotorHighLow(int ENABLE, int DISABLE, int ENABLE2, int DISABLE2){
+void MotorHighLow(int ENABLE, int DISABLE, int ENABLE2, int DISABLE2){
   digitalWrite( ENABLE,  HIGH);
   digitalWrite( DISABLE,  LOW);
   digitalWrite( ENABLE2, HIGH);
   digitalWrite( DISABLE2, LOW);
 }
-//------MOTOR ENGINE ON AND OFF--------//
-bool Motor(bool signal, int speed){ //Engine ON
-  if (signal==true){
+//------MOTOR ENGINGE FORWARD AND STOP-------//
+void Motor(int speed, int duration){
     analogWrite(enA, speed);
     analogWrite(enB, speed);
-  }else if(!signal){                //Engine OFF
-    analogWrite(enA, 0);
-    analogWrite(enB, 0);
-    digitalWrite(Go1, LOW);
-    digitalWrite(Back1, LOW);
-    digitalWrite(Back2, LOW);
-    digitalWrite(Go2, LOW);
-    delay(1000);
-  };
+    delay(duration);
 }
+
 //------ULTRASONIC READING---------
 int Ultrasonic(){
   digitalWrite(Shout, LOW);
@@ -61,8 +62,7 @@ int Ultrasonic(){
   //CLEAR Trigger Pin
   digitalWrite(Shout, HIGH);
   delayMicroseconds(10);
-  digitalWrite(Shout, LOW);
-  // Reads the echoPin, returns the sound wave travel time in microseconds
+  digitalWrite(Shout, LOW);                           // Reads the echoPin, returns the sound wave travel time in microseconds 
   return (distance = (pulseIn(Ear, HIGH)) * 0.034/2); //since the sounds travel 2x(forward and backward) after bouncing, the distance/duration is technically read as double. need to dvide by 2.
 };
 
@@ -71,48 +71,45 @@ int looping(){
   Rotate.write(0);
   delay(1000);
   for(int i=0; i<= 180; i++){
+    delay(5);
     Rotate.write(i);
     newread = Ultrasonic();
     if (read < newread){
       read = newread;
       direction = i;
     }
-  delay(5);
   }
   delay(500);
   Rotate.write(90); //rotate servo back to 90 degree
   return direction;
 }
 
-//---------------------LOOP------------------------------------//
+//--------------------- MAIN SYSTEM LOOP------------------------------------//
 void loop() {
   length = Ultrasonic();
   if (length < 15){
-    Motor(false, 0); //STOP THE ENGINE
+    Motor(0, 500); //STOP THE ENGINE
     //Go Back
-    MotorHighLow(Back2,Go2, Back1, Go1);
-    Motor(true, 40);
-    delay(1200);
-    Motor(false,0);
+    MotorHighLow(Back2, Go2, Back1, Go1);
+    Motor( 60, 500);
+    Motor(  0, 500);
     //GET BEST DIRECTION
     direction = looping(); //Rotate SERVO TO GET DATA IN SURROUNDING  
-    //FIX MOBOT DIRECTION
     delay(1000);
+    //FIX MOBOT DIRECTION
     if (direction < 90){ //0-89 - RIGHT
         MotorHighLow(Back1, Go1, Go2, Back2 );  //FIX MOBOT WHEEL FOR ROTATION     
     }else{               //90-180 - LEFT
         MotorHighLow(Back2, Go2, Go1, Back1); //FIX MOBOT WHEEL FOR ROTATION       
     }
     delay(500);
-    Motor(true, 60); //ROTATE THE MOBOT
+    Motor(70, 0); //ROTATE THE MOBOT
     for (int i=0; i<= 250;i=i+1){
       delay(2);
     }
-    Motor(false, 0);
-  }
-  
+    Motor(0, 500);
+  }  
   //FORWARD
   MotorHighLow(Go1, Back1, Go2, Back2); //MOTOR A FORWARD
-  Motor(true, 55);        //Engine ON
-  delay(200);
+  Motor(55, 200);        //Engine ON
 }
